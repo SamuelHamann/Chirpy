@@ -110,14 +110,13 @@ func (cfg *ApiConfig) CreateUser(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`"error": "Something went wrong -- Database"` + err.Error()))
 		return
 	}
-	
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(user); err != nil {
         w.Write([]byte(`{"error": "Something went wrong -- Encode"}`))
         return
     }
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 }
 
 
