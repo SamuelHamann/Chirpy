@@ -3,18 +3,19 @@ package main
 import (
 	"net/http"
 	"sync/atomic"
-	"fmt"
-	"github.com/samuelhamann/chirpy/apiConfig"
+	api "github.com/samuelhamann/chirpy/api"
+	_ "github.com/lib/pq"
 )
 
 func main() {
-	cfg := &apiConfig{
-		fileserverHits: atomic.Int32{},
+	cfg := api.ApiConfig{
+		FileserverHits: atomic.Int32{},
 	}
 	mux := http.NewServeMux()
-	mux.Handle("/app/", cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
-	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
-	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
+	mux.Handle("/app/", cfg.MiddlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
+	mux.HandleFunc("GET /admin/metrics", cfg.HandlerMetrics)
+	mux.HandleFunc("POST /admin/reset", cfg.HandlerReset)
+	mux.HandleFunc("POST /api/validate_chirp", cfg.ValidateChirp)
 	mux.HandleFunc("GET /api/healthz", handlerFunc)
 	server := &http.Server{
 		Addr:    ":8080",
