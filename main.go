@@ -40,6 +40,8 @@ func main() {
 	mux.HandleFunc("POST /api/validate_chirp", cfg.ValidateChirp)
 	mux.HandleFunc("GET /api/healthz", handlerFunc)
 	mux.HandleFunc("POST /api/users", cfg.CreateUser)
+	mux.HandleFunc("POST /api/chirps", cfg.CreateChirp)
+	mux.HandleFunc("/GET /api/chirps", cfg.GetChirps)
 	server := &http.Server{
 		Addr:    ":8080",
 		Handler: mux,
