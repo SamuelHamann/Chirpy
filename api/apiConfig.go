@@ -6,16 +6,35 @@ import (
 	"fmt"
 	"encoding/json"
 	"strings"
+	"github.com/samuelhamann/chirpy/internal/database"
 )
 
 type ApiConfig struct {
 	FileserverHits atomic.Int32
+	Database *database.Queries
+	Platform string
 }
 
 func (cfg *ApiConfig) HandlerReset(w http.ResponseWriter, r *http.Request) {
 	cfg.FileserverHits.Store(0)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Hits reset to 0"))
+
+	if cfg.Platform != "DEV" {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Forbidden"))
+		return
+	}
+
+	_, err := cfg.Database.DeleterAllUsers(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Error resetting users"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("All users deleted"))
+
 }
 
 func (cfg *ApiConfig) HandlerMetrics(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +83,43 @@ func (cfg *ApiConfig) ValidateChirp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf(`{"cleaned_body":"%s"}`, c.Body)))
 }
+
+func (cfg *ApiConfig) CreateUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte(`"error": "Something went wrong"`))
+		return
+	}
+	var u struct {
+		Email string `json:"email"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&u)
+
+	if err != nil || len(u.Email) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`"error": "Something went wrong -- email"`))
+		return
+	}
+	
+	user, err := cfg.Database.CreateUser(r.Context(), u.Email)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`"error": "Something went wrong -- Database"` + err.Error()))
+		return
+	}
+	
+	if err := json.NewEncoder(w).Encode(user); err != nil {
+        w.Write([]byte(`{"error": "Something went wrong -- Encode"}`))
+        return
+    }
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
 
 func sanitize(input string) string {
 	badWords := []string{"kerfuffle", "sharbert", "fornax", "Kerfuffle", "Sharbert", "Fornax"} // Replace with your actual words

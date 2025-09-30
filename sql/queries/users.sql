@@ -4,3 +4,7 @@ VALUES (
     gen_random_uuid(), NOW(), NOW(), $1
 )
 RETURNING *;
+
+-- name: DeleterAllUsers :many
+DELETE FROM users
+RETURNING *;
