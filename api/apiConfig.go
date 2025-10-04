@@ -11,6 +11,8 @@ type ApiConfig struct {
 	FileserverHits atomic.Int32
 	Database *database.Queries
 	Platform string
+	JWTSecret string
+	PolkaKey string
 }
 
 func (cfg *ApiConfig) HandlerReset(w http.ResponseWriter, r *http.Request) {

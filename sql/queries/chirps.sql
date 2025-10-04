@@ -10,3 +10,8 @@ SELECT * FROM chirps;
 
 -- name: GetChirpById :one
 SELECT * FROM chirps WHERE id = $1;
+
+-- name: DeleteChirp :one
+DELETE FROM chirps
+WHERE id = $1 AND user_id = $2
+RETURNING *;

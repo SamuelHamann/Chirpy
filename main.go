@@ -24,6 +24,16 @@ func main() {
 	}
 	defer db.Close()
 
+	JWTSecret := os.Getenv("JWT_SECRET")
+	if len(JWTSecret) == 0 {
+		fmt.Println("JWT_SECRET is not set")
+		os.Exit(1)
+	}
+	PolkaKey:= os.Getenv("POLKA_KEY")
+	if len(PolkaKey) == 0 {
+		fmt.Println("POLKA_KEY is not set")
+		os.Exit(1)
+	}
 	platform := os.Getenv("PLATFORM")
 	fmt.Println("Starting Chirpy on platform:", platform)
 
@@ -32,6 +42,8 @@ func main() {
 		FileserverHits: atomic.Int32{},
 		Database: dbQueries,
 		Platform: strings.ToUpper(platform),
+		JWTSecret: JWTSecret,
+		PolkaKey: PolkaKey,
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/app/", cfg.MiddlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
@@ -40,9 +52,15 @@ func main() {
 	mux.HandleFunc("POST /api/validate_chirp", cfg.ValidateChirp)
 	mux.HandleFunc("GET /api/healthz", handlerFunc)
 	mux.HandleFunc("POST /api/users", cfg.CreateUser)
+	mux.HandleFunc("POST /api/login", cfg.LoginUser)
 	mux.HandleFunc("POST /api/chirps", cfg.CreateChirp)
 	mux.HandleFunc("GET /api/chirps", cfg.GetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.GetChirpByID)
+	mux.HandleFunc("POST /api/refresh", cfg.RefreshToken)
+	mux.HandleFunc("POST /api/revoke", cfg.RevokeToken)
+	mux.HandleFunc("PUT /api/users", cfg.UpdateUser)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", cfg.DeleteChirp)
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.HandlePolkaWebhook)
 
 	server := &http.Server{
 		Addr:    ":8080",
